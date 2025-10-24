@@ -125,7 +125,7 @@ namespace KolkoKrzyzykTextboxy
 
 
 
-Snake
+Snake game
 
 
 ```
@@ -275,6 +275,19 @@ namespace SnakeMinimal
 }
 
 ```
+Quiz game
+
+| Typ         | Nazwa (Name)    | Tekst (Text)     | Funkcja                           |
+| ----------- | --------------- | ---------------- | --------------------------------- |
+| Label       | `labelQuestion` | Treść pytania    | wyświetla aktualne pytanie        |
+| RadioButton | `radioA`        | Odpowiedź A      | pierwsza odpowiedź                |
+| RadioButton | `radioB`        | Odpowiedź B      | druga odpowiedź                   |
+| RadioButton | `radioC`        | Odpowiedź C      | trzecia odpowiedź                 |
+| RadioButton | `radioD`        | Odpowiedź D      | czwarta odpowiedź                 |
+| Label       | `labelResult`   | *(puste)*        | wyświetla wynik odpowiedzi        |
+| Label       | `labelScore`    | Wynik: 0         | pokazuje liczbę zdobytych punktów |
+| Button      | `buttonCheck`   | Sprawdź          | sprawdza odpowiedź                |
+| Button      | `buttonNext`    | Następne pytanie | przechodzi do kolejnego pytania   |
 
 
 ```
