@@ -163,7 +163,7 @@ namespace SnakeMinimal
 
             timer.Interval = 120;
             timer.Tick += (s, e) => TickGame();
-            this.KeyDown += GameForm_KeyDown;
+            KeyDown += GameForm_KeyDown;
 
             ResetGame();
         }
@@ -200,13 +200,21 @@ namespace SnakeMinimal
             var next = head;
             switch (dir)
             {
-                case Dir.Up:    next = new Point(head.X, head.Y - 1); break;
-                case Dir.Down:  next = new Point(head.X, head.Y + 1); break;
-                case Dir.Left:  next = new Point(head.X - 1, head.Y); break;
+                case Dir.Up: next = new Point(head.X, head.Y - 1); break;
+                case Dir.Down: next = new Point(head.X, head.Y + 1); break;
+                case Dir.Left: next = new Point(head.X - 1, head.Y); break;
                 case Dir.Right: next = new Point(head.X + 1, head.Y); break;
             }
 
-            if (next.X < 0 || next.X >= COLS || next.Y < 0 || next.Y >= ROWS || snake.Contains(next))
+            bool outOfBounds = next.X < 0 || next.X >= COLS || next.Y < 0 || next.Y >= ROWS;
+            bool willGrow = (next == food);
+
+            // Jeśli nie rośniemy, ogon się zaraz usunie — więc go pomijamy przy sprawdzaniu kolizji.
+            bool hitsSelf = willGrow
+                ? snake.Contains(next)
+                : snake.Take(snake.Count - 1).Contains(next);
+
+            if (outOfBounds || hitsSelf)
             {
                 alive = false;
                 Invalidate();
@@ -216,9 +224,10 @@ namespace SnakeMinimal
                 return;
             }
 
+            // Ruch
             snake.Insert(0, next);
 
-            if (next == food)
+            if (willGrow)
             {
                 score += 10;
                 SpawnFood();
@@ -239,10 +248,11 @@ namespace SnakeMinimal
                 return;
             }
 
-            if (e.KeyCode == Keys.Up    && dir != Dir.Down)  dir = Dir.Up;
-            if (e.KeyCode == Keys.Down  && dir != Dir.Up)    dir = Dir.Down;
-            if (e.KeyCode == Keys.Left  && dir != Dir.Right) dir = Dir.Left;
-            if (e.KeyCode == Keys.Right && dir != Dir.Left)  dir = Dir.Right;
+            if (e.KeyCode == Keys.Up && dir != Dir.Down) dir = Dir.Up;
+            if (e.KeyCode == Keys.Down && dir != Dir.Up) dir = Dir.Down;
+            if (e.KeyCode == Keys.Left && dir != Dir.Right) dir = Dir.Left;
+            if (e.KeyCode == Keys.Right && dir != Dir.Left) dir = Dir.Right;
+
             if (e.KeyCode == Keys.P)
             {
                 if (timer.Enabled) timer.Stop(); else timer.Start();
@@ -265,14 +275,17 @@ namespace SnakeMinimal
                 g.FillRectangle(brush, rect);
             }
 
-            string info = alive ? $"Wynik: {score}  |  Sterowanie: strzałki, P=pauza"
-                                : $"Koniec gry! Wynik: {score}  |  Spacja = nowa gra";
-            using var font = new Font("Segoe UI",  nine: false);
+            string info = alive
+                ? $"Wynik: {score}  |  Sterowanie: strzałki, P=pauza"
+                : $"Koniec gry! Wynik: {score}  |  Spacja = nowa gra";
+
+            using var font = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point);
             using var brush2 = new SolidBrush(Color.Black);
             g.DrawString(info, font, brush2, 4, ROWS * CELL + 6);
         }
     }
 }
+
 
 ```
 Quiz game
