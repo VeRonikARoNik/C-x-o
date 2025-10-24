@@ -129,124 +129,144 @@ Snake game
 
 
 ```
-
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+// Jeśli wolisz krócej, odkomentuj alias i używaj "Timer":
+// using Timer = System.Windows.Forms.Timer;
 
-namespace SnakeMinimal
+namespace WinFormsApp3
 {
-    public class GameForm : Form
+    public partial class Form1 : Form
     {
-        const int CELL = 20;
-        const int COLS = 20;
-        const int ROWS = 20;
+        enum Dir { Right, Down, Left, Up }
 
-        enum Dir { Up, Down, Left, Right }
-        List<Point> snake = new List<Point>();
-        Dir dir = Dir.Right;
-        Point food;
-        Timer timer = new Timer();
-        Random rng = new Random();
-        bool alive = true;
-        int score = 0;
+        private readonly Panel canvas = new Panel();
+        private readonly Label hud = new Label();
+        private readonly System.Windows.Forms.Timer gameTimer = new System.Windows.Forms.Timer();
+        // Jeśli używasz aliasu powyżej, możesz napisać: private readonly Timer gameTimer = new Timer();
 
-        public GameForm()
+        private readonly List<Point> snake = new List<Point>();
+        private Point food;
+        private Dir dir = Dir.Right;
+        private int cell = 20;
+        private int score = 0;
+        private bool isGameOver = false;
+        private readonly Random rng = new Random();
+
+        public Form1()
         {
-            Text = "Żmijka — najprostsza wersja";
-            ClientSize = new Size(COLS * CELL, ROWS * CELL + 30);
-            BackColor = Color.White;
+            InitializeComponent();
+
+            // Okno
+            Text = "Snake — C# WinForms";
+            ClientSize = new Size(640, 480);
+            StartPosition = FormStartPosition.CenterScreen;
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
             DoubleBuffered = true;
             KeyPreview = true;
 
-            timer.Interval = 120;
-            timer.Tick += (s, e) => TickGame();
-            KeyDown += GameForm_KeyDown;
+            // HUD
+            hud.AutoSize = true;
+            hud.Font = new Font(Font.FontFamily, 10, FontStyle.Bold);
+            hud.Padding = new Padding(8);
+            hud.Text = "Score: 0   [Strzałki] ruch  |  [Spacja] pauza/restart";
+            Controls.Add(hud);
 
-            ResetGame();
+            // Canvas
+            canvas.Location = new Point(0, hud.Height);
+            canvas.Size = new Size(ClientSize.Width, ClientSize.Height - hud.Height);
+            canvas.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            canvas.BackColor = Color.Black;
+            canvas.Paint += Canvas_Paint;
+            Controls.Add(canvas);
+
+            // Timer
+            gameTimer.Interval = 120;
+            gameTimer.Tick += GameTimer_Tick;
+
+            // Klawiatura
+            KeyDown += Form1_KeyDown;
+
+            StartGame();
         }
 
-        void ResetGame()
+        private void StartGame()
         {
-            alive = true;
+            snake.Clear();
             score = 0;
             dir = Dir.Right;
-            snake.Clear();
+            isGameOver = false;
 
-            var start = new Point(COLS / 2, ROWS / 2);
-            snake.Add(start);
-            snake.Add(new Point(start.X - 1, start.Y));
-            snake.Add(new Point(start.X - 2, start.Y));
+            snake.Add(new Point(5, 5));
+            snake.Add(new Point(4, 5));
+            snake.Add(new Point(3, 5));
 
             SpawnFood();
-            timer.Start();
-            Invalidate();
+            gameTimer.Start();
+            UpdateHud();
+            canvas.Invalidate();
         }
 
-        void SpawnFood()
+        private void UpdateHud()
         {
-            while (true)
-            {
-                var p = new Point(rng.Next(0, COLS), rng.Next(0, ROWS));
-                if (!snake.Contains(p))
-                {
-                    food = p;
-                    return;
-                }
-            }
+            hud.Text = $"Score: {score}   [Strzałki] ruch  |  [Spacja] pauza/restart";
         }
 
-        void TickGame()
+        private (int cols, int rows) GridSize()
         {
-            if (!alive)
-            {
-                timer.Stop();
-                return;
-            }
+            int cols = Math.Max(1, canvas.ClientSize.Width / cell);
+            int rows = Math.Max(1, canvas.ClientSize.Height / cell);
+            return (cols, rows);
+        }
 
-            var head = snake[0];
+        private void SpawnFood()
+        {
+            var (cols, rows) = GridSize();
+            do
+            {
+                food = new Point(rng.Next(cols), rng.Next(rows));
+            } while (snake.Contains(food));
+        }
+
+        // == Uwaga: object? sender ==
+        private void GameTimer_Tick(object? sender, EventArgs e)
+        {
+            if (isGameOver) return;
+
+            var head = snake.First();
             var next = head;
 
             switch (dir)
             {
-                case Dir.Up: next = new Point(head.X, head.Y - 1); break;
-                case Dir.Down: next = new Point(head.X, head.Y + 1); break;
-                case Dir.Left: next = new Point(head.X - 1, head.Y); break;
-                case Dir.Right: next = new Point(head.X + 1, head.Y); break;
+                case Dir.Right: next.X++; break;
+                case Dir.Left: next.X--; break;
+                case Dir.Down: next.Y++; break;
+                case Dir.Up: next.Y--; break;
             }
 
-            bool outOfBounds = next.X < 0 || next.X >= COLS || next.Y < 0 || next.Y >= ROWS;
-            bool willGrow = (next == food);
+            var (cols, rows) = GridSize();
 
-            // Jeśli nie rośniemy, ogon zaraz zniknie – nie uwzględniamy go przy kolizji.
-            bool hitsSelf = willGrow
-                ? snake.Contains(next)
-                : snake.Take(snake.Count - 1).Contains(next);
+            bool hitWall = next.X < 0 || next.Y < 0 || next.X >= cols || next.Y >= rows;
+            bool hitSelf = snake.Contains(next);
 
-            if (outOfBounds || hitsSelf)
+            if (hitWall || hitSelf)
             {
-                alive = false;
-                Invalidate();
-                var res = MessageBox.Show(
-                    $"Koniec gry! Wynik: {score}\nZagrać ponownie?",
-                    "Żmijka",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Information);
-
-                if (res == DialogResult.Yes)
-                    ResetGame();
-
+                gameTimer.Stop();
+                isGameOver = true;
+                canvas.Invalidate();
                 return;
             }
 
-            // Ruch
             snake.Insert(0, next);
 
-            if (willGrow)
+            if (next == food)
             {
                 score += 10;
+                UpdateHud();
                 SpawnFood();
             }
             else
@@ -254,65 +274,63 @@ namespace SnakeMinimal
                 snake.RemoveAt(snake.Count - 1);
             }
 
-            Invalidate();
+            canvas.Invalidate();
         }
 
-        void GameForm_KeyDown(object sender, KeyEventArgs e)
+        private void Canvas_Paint(object? sender, PaintEventArgs e)
         {
-            if (!alive && e.KeyCode == Keys.Space)
+            var g = e.Graphics;
+
+            using (var foodBrush = new SolidBrush(Color.Red))
             {
-                ResetGame();
-                return;
-            }
-
-            if (e.KeyCode == Keys.Up && dir != Dir.Down) dir = Dir.Up;
-            if (e.KeyCode == Keys.Down && dir != Dir.Up) dir = Dir.Down;
-            if (e.KeyCode == Keys.Left && dir != Dir.Right) dir = Dir.Left;
-            if (e.KeyCode == Keys.Right && dir != Dir.Left) dir = Dir.Right;
-
-            if (e.KeyCode == Keys.P)
-            {
-                if (timer.Enabled)
-                    timer.Stop();
-                else
-                    timer.Start();
-            }
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            Graphics g = e.Graphics;
-
-            using (SolidBrush foodBrush = new SolidBrush(Color.IndianRed))
-            {
-                g.FillRectangle(foodBrush, food.X * CELL, food.Y * CELL, CELL, CELL);
+                g.FillRectangle(foodBrush, food.X * cell, food.Y * cell, cell, cell);
             }
 
             for (int i = 0; i < snake.Count; i++)
             {
-                Point p = snake[i];
-                Rectangle rect = new Rectangle(p.X * CELL, p.Y * CELL, CELL, CELL);
-                Color color = (i == 0) ? Color.SeaGreen : Color.MediumSeaGreen;
-
-                using (SolidBrush brush = new SolidBrush(color))
+                var p = snake[i];
+                var color = i == 0 ? Color.Lime : Color.Green;
+                using (var b = new SolidBrush(color))
                 {
-                    g.FillRectangle(brush, rect);
+                    g.FillRectangle(b, p.X * cell, p.Y * cell, cell, cell);
                 }
             }
 
-            string info = alive
-                ? $"Wynik: {score}  |  Sterowanie: strzałki, P=pauza"
-                : $"Koniec gry! Wynik: {score}  |  Spacja = nowa gra";
-
-            using (Font font = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point))
-            using (SolidBrush brush2 = new SolidBrush(Color.Black))
+            if (isGameOver)
             {
-                g.DrawString(info, font, brush2, 4, ROWS * CELL + 6);
+                string msg = "GAME OVER — [Spacja] aby zagrać ponownie";
+                using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+                using (var brush = new SolidBrush(Color.White))
+                using (var font = new Font(Font.FontFamily, 14, FontStyle.Bold))
+                {
+                    g.DrawString(msg, font, brush, canvas.ClientRectangle, sf);
+                }
             }
         }
+
+        private void Form1_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Right && dir != Dir.Left) dir = Dir.Right;
+            else if (e.KeyCode == Keys.Left && dir != Dir.Right) dir = Dir.Left;
+            else if (e.KeyCode == Keys.Up && dir != Dir.Down) dir = Dir.Up;
+            else if (e.KeyCode == Keys.Down && dir != Dir.Up) dir = Dir.Down;
+
+            if (e.KeyCode == Keys.Space)
+            {
+                if (isGameOver) StartGame();
+                else
+                {
+                    if (gameTimer.Enabled) gameTimer.Stop();
+                    else gameTimer.Start();
+                }
+            }
+        }
+
+        // Ten handler może zostać w designerze – dostosowany do nullability:
+        private void Form1_Load(object? sender, EventArgs e) { }
     }
 }
+
 
 
 
