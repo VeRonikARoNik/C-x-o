@@ -174,10 +174,12 @@ namespace SnakeMinimal
             score = 0;
             dir = Dir.Right;
             snake.Clear();
+
             var start = new Point(COLS / 2, ROWS / 2);
             snake.Add(start);
             snake.Add(new Point(start.X - 1, start.Y));
             snake.Add(new Point(start.X - 2, start.Y));
+
             SpawnFood();
             timer.Start();
             Invalidate();
@@ -188,16 +190,25 @@ namespace SnakeMinimal
             while (true)
             {
                 var p = new Point(rng.Next(0, COLS), rng.Next(0, ROWS));
-                if (!snake.Contains(p)) { food = p; return; }
+                if (!snake.Contains(p))
+                {
+                    food = p;
+                    return;
+                }
             }
         }
 
         void TickGame()
         {
-            if (!alive) { timer.Stop(); return; }
+            if (!alive)
+            {
+                timer.Stop();
+                return;
+            }
 
             var head = snake[0];
             var next = head;
+
             switch (dir)
             {
                 case Dir.Up: next = new Point(head.X, head.Y - 1); break;
@@ -209,7 +220,7 @@ namespace SnakeMinimal
             bool outOfBounds = next.X < 0 || next.X >= COLS || next.Y < 0 || next.Y >= ROWS;
             bool willGrow = (next == food);
 
-            // Jeśli nie rośniemy, ogon się zaraz usunie — więc go pomijamy przy sprawdzaniu kolizji.
+            // Jeśli nie rośniemy, ogon zaraz zniknie – nie uwzględniamy go przy kolizji.
             bool hitsSelf = willGrow
                 ? snake.Contains(next)
                 : snake.Take(snake.Count - 1).Contains(next);
@@ -218,9 +229,15 @@ namespace SnakeMinimal
             {
                 alive = false;
                 Invalidate();
-                var res = MessageBox.Show($"Koniec gry! Wynik: {score}\nZagrać ponownie?", "Żmijka",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Information);
-                if (res == DialogResult.Yes) ResetGame();
+                var res = MessageBox.Show(
+                    $"Koniec gry! Wynik: {score}\nZagrać ponownie?",
+                    "Żmijka",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Information);
+
+                if (res == DialogResult.Yes)
+                    ResetGame();
+
                 return;
             }
 
@@ -255,36 +272,48 @@ namespace SnakeMinimal
 
             if (e.KeyCode == Keys.P)
             {
-                if (timer.Enabled) timer.Stop(); else timer.Start();
+                if (timer.Enabled)
+                    timer.Stop();
+                else
+                    timer.Start();
             }
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            var g = e.Graphics;
+            Graphics g = e.Graphics;
 
-            using var foodBrush = new SolidBrush(Color.IndianRed);
-            g.FillRectangle(foodBrush, food.X * CELL, food.Y * CELL, CELL, CELL);
+            using (SolidBrush foodBrush = new SolidBrush(Color.IndianRed))
+            {
+                g.FillRectangle(foodBrush, food.X * CELL, food.Y * CELL, CELL, CELL);
+            }
 
             for (int i = 0; i < snake.Count; i++)
             {
-                var p = snake[i];
+                Point p = snake[i];
                 Rectangle rect = new Rectangle(p.X * CELL, p.Y * CELL, CELL, CELL);
-                using var brush = new SolidBrush(i == 0 ? Color.SeaGreen : Color.MediumSeaGreen);
-                g.FillRectangle(brush, rect);
+                Color color = (i == 0) ? Color.SeaGreen : Color.MediumSeaGreen;
+
+                using (SolidBrush brush = new SolidBrush(color))
+                {
+                    g.FillRectangle(brush, rect);
+                }
             }
 
             string info = alive
                 ? $"Wynik: {score}  |  Sterowanie: strzałki, P=pauza"
                 : $"Koniec gry! Wynik: {score}  |  Spacja = nowa gra";
 
-            using var font = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point);
-            using var brush2 = new SolidBrush(Color.Black);
-            g.DrawString(info, font, brush2, 4, ROWS * CELL + 6);
+            using (Font font = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point))
+            using (SolidBrush brush2 = new SolidBrush(Color.Black))
+            {
+                g.DrawString(info, font, brush2, 4, ROWS * CELL + 6);
+            }
         }
     }
 }
+
 
 
 ```
