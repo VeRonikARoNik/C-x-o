@@ -280,274 +280,132 @@ namespace SnakeMinimal
 ```
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
 using System.Windows.Forms;
 
 namespace QuizABC
 {
-    public class QuizForm : Form
+    public partial class Form1 : Form
     {
-        private class Question
+        // struktura pytania
+        class Question
         {
-            public string Text { get; set; }
-            public string[] Answers { get; set; } = new string[4];
-            public int CorrectIndex { get; set; }
+            public string Text;
+            public string[] Answers;
+            public int Correct;
         }
 
-        // UI
-        private Label lblTitle;
-        private Label lblQuestion;
-        private RadioButton[] options = new RadioButton[4];
-        private Button btnCheck;
-        private Button btnNext;
-        private Label lblFeedback;
-        private Label lblScore;
+        List<Question> quiz = new List<Question>();
+        int index = 0;
+        int score = 0;
 
-        // State
-        private List<Question> quiz;
-        private int idx = 0;
-        private int score = 0;
-        private bool checkedThis = false;
-
-        public QuizForm()
+        public Form1()
         {
-            Text = "Quiz wiedzy (ABC)";
-            StartPosition = FormStartPosition.CenterScreen;
-            MinimumSize = new Size(640, 420);
-            Font = new Font("Segoe UI", 10);
-            KeyPreview = true;
-
-            BuildUi();
-            BuildQuiz();      // tu definiujesz pytania
-            LoadQuestion(0);  // start
+            InitializeComponent();
+            BuildQuiz();
+            LoadQuestion(0);
         }
 
-        private void BuildUi()
+        void BuildQuiz()
         {
-            var root = new TableLayoutPanel
+            quiz.Add(new Question
             {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 5,
-                Padding = new Padding(16),
-            };
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // tytuł
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // pytanie
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));    // odpowiedzi
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // feedback
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));        // przyciski / wynik
-            Controls.Add(root);
+                Text = "Który typ danych w C# przechowuje liczby całkowite?",
+                Answers = new[] { "string", "int", "double", "bool" },
+                Correct = 1
+            });
 
-            lblTitle = new Label
+            quiz.Add(new Question
             {
-                Text = "QUIZ — wybierz jedną odpowiedź",
-                Font = new Font(Font, FontStyle.Bold),
-                AutoSize = true,
-                Margin = new Padding(0, 0, 0, 6)
-            };
-            root.Controls.Add(lblTitle, 0, 0);
+                Text = "Który operator służy do porównywania wartości?",
+                Answers = new[] { "=", "==", "equals", "!=" },
+                Correct = 1
+            });
 
-            lblQuestion = new Label
+            quiz.Add(new Question
             {
-                Text = "Treść pytania...",
-                Font = new Font(Font.FontFamily, 12, FontStyle.Regular),
-                AutoSize = true,
-                MaximumSize = new Size(1000, 0), // zawijanie
-                Margin = new Padding(0, 0, 0, 10)
-            };
-            root.Controls.Add(lblQuestion, 0, 1);
+                Text = "Która pętla wykona się co najmniej raz?",
+                Answers = new[] { "for", "while", "do-while", "foreach" },
+                Correct = 2
+            });
 
-            var answersPanel = new TableLayoutPanel
+            quiz.Add(new Question
             {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 4,
-            };
-            for (int i = 0; i < 4; i++)
-            {
-                answersPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25));
-                var rb = new RadioButton
-                {
-                    Text = $"Opcja {i + 1}",
-                    AutoSize = true,
-                    Margin = new Padding(0, 6, 0, 6)
-                };
-                options[i] = rb;
-                answersPanel.Controls.Add(rb, 0, i);
-            }
-            root.Controls.Add(answersPanel, 0, 2);
-
-            lblFeedback = new Label
-            {
-                Text = " ",
-                AutoSize = true,
-                ForeColor = Color.DimGray,
-                Margin = new Padding(0, 6, 0, 6)
-            };
-            root.Controls.Add(lblFeedback, 0, 3);
-
-            var bottom = new FlowLayoutPanel
-            {
-                FlowDirection = FlowDirection.LeftToRight,
-                Dock = DockStyle.Fill,
-                AutoSize = true
-            };
-
-            btnCheck = new Button { Text = "Sprawdź", AutoSize = true };
-            btnCheck.Click += (s, e) => CheckAnswer();
-
-            btnNext = new Button { Text = "Następne pytanie", AutoSize = true, Enabled = false };
-            btnNext.Click += (s, e) => NextQuestion();
-
-            lblScore = new Label { Text = "Wynik: 0 pkt", AutoSize = true, Margin = new Padding(16, 6, 0, 0) };
-
-            bottom.Controls.Add(btnCheck);
-            bottom.Controls.Add(btnNext);
-            bottom.Controls.Add(lblScore);
-
-            root.Controls.Add(bottom, 0, 4);
-
-            // Enter = Sprawdź, Ctrl+Enter = Następne
-            this.KeyDown += (s, e) =>
-            {
-                if (e.KeyCode == Keys.Enter && !e.Control)
-                {
-                    e.SuppressKeyPress = true;
-                    if (btnCheck.Enabled) CheckAnswer();
-                }
-                else if (e.KeyCode == Keys.Enter && e.Control)
-                {
-                    e.SuppressKeyPress = true;
-                    if (btnNext.Enabled) NextQuestion();
-                }
-            };
+                Text = "Jaką wartość logiczną ma warunek: 5 > 10?",
+                Answers = new[] { "true", "false", "error", "null" },
+                Correct = 1
+            });
         }
 
-        private void BuildQuiz()
-        {
-            // PRZYKŁADOWE PYTANIA – podmień na swoje
-            quiz = new List<Question>
-            {
-                new Question {
-                    Text = "Który typ w C# przechowuje liczby całkowite?",
-                    Answers = new[] { "string", "int", "double", "bool" },
-                    CorrectIndex = 1
-                },
-                new Question {
-                    Text = "Co zwraca operator '==' w C#?",
-                    Answers = new[] { "Liczbę całkowitą", "Znak", "Wartość bool (true/false)", "Nic" },
-                    CorrectIndex = 2
-                },
-                new Question {
-                    Text = "Która pętla wykona się co najmniej raz?",
-                    Answers = new[] { "for", "while", "do-while", "foreach" },
-                    CorrectIndex = 2
-                },
-                new Question {
-                    Text = "Jaki jest domyślny modyfikator dostępu dla pól klasy w C#?",
-                    Answers = new[] { "public", "private", "protected", "internal" },
-                    CorrectIndex = 1
-                },
-            };
-
-            // (opcjonalnie) losowa kolejność
-            // var rnd = new Random();
-            // quiz = quiz.OrderBy(_ => rnd.Next()).ToList();
-        }
-
-        private void LoadQuestion(int i)
+        void LoadQuestion(int i)
         {
             if (i >= quiz.Count)
             {
-                EndQuiz();
+                MessageBox.Show($"Koniec quizu!\nTwój wynik: {score}/{quiz.Count}", "Quiz");
+                ResetQuiz();
                 return;
             }
 
             var q = quiz[i];
-            lblQuestion.Text = $"Pytanie {i + 1}/{quiz.Count}: {q.Text}";
-            for (int k = 0; k < 4; k++)
-            {
-                options[k].Text = q.Answers[k];
-                options[k].Checked = false;
-                options[k].Enabled = true;
-            }
-            lblFeedback.Text = " ";
-            lblFeedback.ForeColor = Color.DimGray;
+            labelQuestion.Text = q.Text;
+            radioA.Text = q.Answers[0];
+            radioB.Text = q.Answers[1];
+            radioC.Text = q.Answers[2];
+            radioD.Text = q.Answers[3];
 
-            btnCheck.Enabled = true;
-            btnNext.Enabled = false;
-            checkedThis = false;
+            radioA.Checked = radioB.Checked = radioC.Checked = radioD.Checked = false;
+            labelResult.Text = "";
         }
 
-        private void CheckAnswer()
+        private void buttonCheck_Click(object sender, EventArgs e)
         {
-            if (checkedThis) return;
+            if (index >= quiz.Count) return;
 
-            int selected = Array.FindIndex(options, rb => rb.Checked);
+            var q = quiz[index];
+            int selected = -1;
+
+            if (radioA.Checked) selected = 0;
+            else if (radioB.Checked) selected = 1;
+            else if (radioC.Checked) selected = 2;
+            else if (radioD.Checked) selected = 3;
+
             if (selected == -1)
             {
-                MessageBox.Show("Wybierz odpowiedź.", "Uwaga", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Zaznacz odpowiedź!", "Uwaga");
                 return;
             }
 
-            var q = quiz[idx];
-            bool ok = selected == q.CorrectIndex;
-
-            if (ok)
+            if (selected == q.Correct)
             {
-                score += 1;
-                lblFeedback.Text = "✅ Dobrze!";
-                lblFeedback.ForeColor = Color.SeaGreen;
+                score++;
+                labelResult.Text = "✅ Dobrze!";
+                labelResult.ForeColor = System.Drawing.Color.Green;
             }
             else
             {
-                lblFeedback.Text = $"❌ Źle. Poprawna odpowiedź: {q.Answers[q.CorrectIndex]}";
-                lblFeedback.ForeColor = Color.IndianRed;
+                labelResult.Text = $"❌ Źle! Poprawna: {q.Answers[q.Correct]}";
+                labelResult.ForeColor = System.Drawing.Color.Red;
             }
 
-            lblScore.Text = $"Wynik: {score} pkt";
-
-            // zablokuj zmiany odpowiedzi
-            foreach (var rb in options) rb.Enabled = false;
-
-            btnCheck.Enabled = false;
-            btnNext.Enabled = true;
-            checkedThis = true;
+            labelScore.Text = $"Wynik: {score}";
+            buttonCheck.Enabled = false;
         }
 
-        private void NextQuestion()
+        private void buttonNext_Click(object sender, EventArgs e)
         {
-            if (!checkedThis)
-            {
-                MessageBox.Show("Najpierw kliknij 'Sprawdź'.", "Uwaga", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-            idx++;
-            LoadQuestion(idx);
+            index++;
+            buttonCheck.Enabled = true;
+            LoadQuestion(index);
         }
 
-        private void EndQuiz()
+        void ResetQuiz()
         {
-            foreach (var rb in options) rb.Enabled = false;
-            btnCheck.Enabled = false;
-            btnNext.Enabled = false;
-
-            lblQuestion.Text = "Koniec quizu!";
-            lblFeedback.Text = $"Twój wynik: {score} / {quiz.Count}";
-            lblFeedback.ForeColor = Color.DodgerBlue;
-
-            var res = MessageBox.Show($"Koniec quizu!\nWynik: {score}/{quiz.Count}\n\nCzy chcesz zagrać ponownie?",
-                "Quiz", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
-            if (res == DialogResult.Yes)
-            {
-                idx = 0; score = 0;
-                lblScore.Text = "Wynik: 0 pkt";
-                LoadQuestion(0);
-            }
+            index = 0;
+            score = 0;
+            labelScore.Text = "Wynik: 0";
+            buttonCheck.Enabled = true;
+            LoadQuestion(0);
         }
     }
 }
-
 
 ```
