@@ -349,132 +349,183 @@ Quiz game
 ```
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Forms;
 
-namespace QuizABC
+namespace QuizWinForms
 {
     public partial class Form1 : Form
     {
-        // struktura pytania
-        class Question
+        // Prosty model pytania
+        private class Question
         {
-            public string Text;
-            public string[] Answers;
-            public int Correct;
+            public string Text { get; set; }
+            public string[] Options { get; set; } // 4 odpowiedzi
+            public int CorrectIndex { get; set; } // 0..3
         }
 
-        List<Question> quiz = new List<Question>();
-        int index = 0;
-        int score = 0;
+        private List<Question> _quiz;
+        private int _currentIndex = 0;
+        private int _score = 0;
+        private bool _answered = false;
 
         public Form1()
         {
             InitializeComponent();
-            BuildQuiz();
-            LoadQuestion(0);
+
+            // Podpisy przycisków (możesz ustawić też w projektancie)
+            button1.Text = "Sprawdź";
+            button2.Text = "Dalej";
+
+            // Zdarzenia
+            button1.Click += ButtonCheck_Click;
+            button2.Click += ButtonNext_Click;
+            this.Load += Form1_Load;
+
+            // Kliknięcie dowolnego radiobuttona odblokuje "Sprawdź"
+            radioButton1.CheckedChanged += AnyOption_CheckedChanged;
+            radioButton2.CheckedChanged += AnyOption_CheckedChanged;
+            radioButton3.CheckedChanged += AnyOption_CheckedChanged;
+            radioButton4.CheckedChanged += AnyOption_CheckedChanged;
         }
 
-        void BuildQuiz()
+        private void Form1_Load(object sender, EventArgs e)
         {
-            quiz.Add(new Question
+            // Zestaw przykładowych pytań
+            _quiz = new List<Question>
             {
-                Text = "Który typ danych w C# przechowuje liczby całkowite?",
-                Answers = new[] { "string", "int", "double", "bool" },
-                Correct = 1
-            });
+                new Question
+                {
+                    Text = "Stolica Polski to…",
+                    Options = new[] {"Kraków", "Gdańsk", "Warszawa", "Wrocław"},
+                    CorrectIndex = 2
+                },
+                new Question
+                {
+                    Text = "Ile to 3 × 7?",
+                    Options = new[] {"20", "21", "24", "27"},
+                    CorrectIndex = 1
+                },
+                new Question
+                {
+                    Text = "Który typ w C# jest typu referencyjnego?",
+                    Options = new[] {"int", "double", "bool", "string"},
+                    CorrectIndex = 3
+                }
+            };
 
-            quiz.Add(new Question
-            {
-                Text = "Który operator służy do porównywania wartości?",
-                Answers = new[] { "=", "==", "equals", "!=" },
-                Correct = 1
-            });
-
-            quiz.Add(new Question
-            {
-                Text = "Która pętla wykona się co najmniej raz?",
-                Answers = new[] { "for", "while", "do-while", "foreach" },
-                Correct = 2
-            });
-
-            quiz.Add(new Question
-            {
-                Text = "Jaką wartość logiczną ma warunek: 5 > 10?",
-                Answers = new[] { "true", "false", "error", "null" },
-                Correct = 1
-            });
+            _currentIndex = 0;
+            _score = 0;
+            UpdateScoreLabel();
+            LoadQuestion();
         }
 
-        void LoadQuestion(int i)
+        private void LoadQuestion()
         {
-            if (i >= quiz.Count)
-            {
-                MessageBox.Show($"Koniec quizu!\nTwój wynik: {score}/{quiz.Count}", "Quiz");
-                ResetQuiz();
-                return;
-            }
+            _answered = false;
+            EnableOptions(true);
+            ClearSelection();
+            button1.Enabled = false;       // „Sprawdź” aktywne dopiero po wyborze
+            button2.Enabled = false;       // „Dalej” dopiero po sprawdzeniu
+            label3.Text = "";              // czyść feedback
 
-            var q = quiz[i];
-            labelQuestion.Text = q.Text;
-            radioA.Text = q.Answers[0];
-            radioB.Text = q.Answers[1];
-            radioC.Text = q.Answers[2];
-            radioD.Text = q.Answers[3];
+            var q = _quiz[_currentIndex];
+            label1.Text = $"Pytanie {(_currentIndex + 1)}/{_quiz.Count}: {q.Text}";
+            radioButton1.Text = q.Options[0];
+            radioButton2.Text = q.Options[1];
+            radioButton3.Text = q.Options[2];
+            radioButton4.Text = q.Options[3];
 
-            radioA.Checked = radioB.Checked = radioC.Checked = radioD.Checked = false;
-            labelResult.Text = "";
+            // Upewnij się, że nazwy RadioButtonów są widoczne (gdyby ktoś je zmienił)
+            radioButton1.Visible = radioButton2.Visible = radioButton3.Visible = radioButton4.Visible = true;
+
+            // Ustaw napis na przycisku „Dalej”/„Restart”
+            button2.Text = (_currentIndex == _quiz.Count - 1) ? "Zakończ" : "Dalej";
         }
 
-        private void buttonCheck_Click(object sender, EventArgs e)
+        private void ButtonCheck_Click(object sender, EventArgs e)
         {
-            if (index >= quiz.Count) return;
+            if (_answered) return;
 
-            var q = quiz[index];
-            int selected = -1;
+            int selected = GetSelectedIndex();
+            if (selected == -1) return;
 
-            if (radioA.Checked) selected = 0;
-            else if (radioB.Checked) selected = 1;
-            else if (radioC.Checked) selected = 2;
-            else if (radioD.Checked) selected = 3;
+            _answered = true;
+            EnableOptions(false);      // zablokuj odpowiedzi po sprawdzeniu
+            button2.Enabled = true;    // można przejść dalej
 
-            if (selected == -1)
+            var q = _quiz[_currentIndex];
+            if (selected == q.CorrectIndex)
             {
-                MessageBox.Show("Zaznacz odpowiedź!", "Uwaga");
-                return;
-            }
-
-            if (selected == q.Correct)
-            {
-                score++;
-                labelResult.Text = "✅ Dobrze!";
-                labelResult.ForeColor = System.Drawing.Color.Green;
+                _score++;
+                label3.Text = "✅ Dobrze!";
             }
             else
             {
-                labelResult.Text = $"❌ Źle! Poprawna: {q.Answers[q.Correct]}";
-                labelResult.ForeColor = System.Drawing.Color.Red;
+                label3.Text = $"❌ Źle. Poprawna odpowiedź: {q.Options[q.CorrectIndex]}";
             }
-
-            labelScore.Text = $"Wynik: {score}";
-            buttonCheck.Enabled = false;
+            UpdateScoreLabel();
         }
 
-        private void buttonNext_Click(object sender, EventArgs e)
+        private void ButtonNext_Click(object sender, EventArgs e)
         {
-            index++;
-            buttonCheck.Enabled = true;
-            LoadQuestion(index);
+            if (!_answered) return; // najpierw sprawdź
+
+            if (_currentIndex < _quiz.Count - 1)
+            {
+                _currentIndex++;
+                LoadQuestion();
+            }
+            else
+            {
+                // Koniec quizu – pokaż podsumowanie i opcję restartu
+                MessageBox.Show($"Koniec! Twój wynik: {_score}/{_quiz.Count}", "Quiz");
+                // Restart
+                _currentIndex = 0;
+                _score = 0;
+                UpdateScoreLabel();
+                LoadQuestion();
+                label3.Text = "Nowa runda – powodzenia!";
+            }
         }
 
-        void ResetQuiz()
+        private void AnyOption_CheckedChanged(object sender, EventArgs e)
         {
-            index = 0;
-            score = 0;
-            labelScore.Text = "Wynik: 0";
-            buttonCheck.Enabled = true;
-            LoadQuestion(0);
+            if (!_answered)
+                button1.Enabled = GetSelectedIndex() != -1;
+        }
+
+        private void UpdateScoreLabel()
+        {
+            label2.Text = $"Wynik: {_score}/{_quiz.Count}";
+        }
+
+        private void EnableOptions(bool enabled)
+        {
+            radioButton1.Enabled = enabled;
+            radioButton2.Enabled = enabled;
+            radioButton3.Enabled = enabled;
+            radioButton4.Enabled = enabled;
+        }
+
+        private void ClearSelection()
+        {
+            radioButton1.Checked = false;
+            radioButton2.Checked = false;
+            radioButton3.Checked = false;
+            radioButton4.Checked = false;
+        }
+
+        private int GetSelectedIndex()
+        {
+            if (radioButton1.Checked) return 0;
+            if (radioButton2.Checked) return 1;
+            if (radioButton3.Checked) return 2;
+            if (radioButton4.Checked) return 3;
+            return -1;
         }
     }
 }
+
 
 ```
