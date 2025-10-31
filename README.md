@@ -333,196 +333,124 @@ namespace WinFormsApp3
 ```
 Quiz game
 
-| Typ         | Nazwa (Name)    | Tekst (Text)     | Funkcja                           |
-| ----------- | --------------- | ---------------- | --------------------------------- |
-| Label       | `labelQuestion` | Treść pytania    | wyświetla aktualne pytanie        |
-| RadioButton | `radioA`        | Odpowiedź A      | pierwsza odpowiedź                |
-| RadioButton | `radioB`        | Odpowiedź B      | druga odpowiedź                   |
-| RadioButton | `radioC`        | Odpowiedź C      | trzecia odpowiedź                 |
-| RadioButton | `radioD`        | Odpowiedź D      | czwarta odpowiedź                 |
-| Label       | `labelResult`   | *(puste)*        | wyświetla wynik odpowiedzi        |
-| Label       | `labelScore`    | Wynik: 0         | pokazuje liczbę zdobytych punktów |
-| Button      | `buttonCheck`   | Sprawdź          | sprawdza odpowiedź                |
-| Button      | `buttonNext`    | Następne pytanie | przechodzi do kolejnego pytania   |
-
+label1, label2,label3,  radioButton1, radioButton2, radioButton3, radioButton4, button1, button2
 
 ```
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Drawing;
 using System.Windows.Forms;
 
-namespace QuizWinForms
+namespace QUIZ
 {
-    public partial class Form1 : Form
+    public partial class QuizForm : Form
     {
-        // Prosty model pytania
-        private class Question
+        private int currentQuestion = 0;
+        private int score = 0;
+
+        // pytania
+        private readonly List<Question> questions = new List<Question>
         {
-            public string Text { get; set; }
-            public string[] Options { get; set; } // 4 odpowiedzi
-            public int CorrectIndex { get; set; } // 0..3
-        }
+            new Question("Który język jest wykorzystywany w Unity?",
+                new[] { "Python", "C#", "Java", "C++" }, 1),
+            new Question("Ile bitów ma bajt?",
+                new[] { "4", "8", "16", "32" }, 1),
+            new Question("Co oznacza skrót AI?",
+                new[] { "Active Internet", "Artificial Intelligence", "Auto Integration", "Advanced Input" }, 1),
+            new Question("Kto jest twórcą Microsoft?",
+                new[] { "Steve Jobs", "Bill Gates", "Mark Zuckerberg", "Elon Musk" }, 1),
+        };
 
-        private List<Question> _quiz;
-        private int _currentIndex = 0;
-        private int _score = 0;
-        private bool _answered = false;
-
-        public Form1()
+        public QuizForm()
         {
             InitializeComponent();
-
-            // Podpisy przycisków (możesz ustawić też w projektancie)
-            button1.Text = "Sprawdź";
-            button2.Text = "Dalej";
-
-            // Zdarzenia
-            button1.Click += ButtonCheck_Click;
-            button2.Click += ButtonNext_Click;
-            this.Load += Form1_Load;
-
-            // Kliknięcie dowolnego radiobuttona odblokuje "Sprawdź"
-            radioButton1.CheckedChanged += AnyOption_CheckedChanged;
-            radioButton2.CheckedChanged += AnyOption_CheckedChanged;
-            radioButton3.CheckedChanged += AnyOption_CheckedChanged;
-            radioButton4.CheckedChanged += AnyOption_CheckedChanged;
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            // Zestaw przykładowych pytań
-            _quiz = new List<Question>
-            {
-                new Question
-                {
-                    Text = "Stolica Polski to…",
-                    Options = new[] {"Kraków", "Gdańsk", "Warszawa", "Wrocław"},
-                    CorrectIndex = 2
-                },
-                new Question
-                {
-                    Text = "Ile to 3 × 7?",
-                    Options = new[] {"20", "21", "24", "27"},
-                    CorrectIndex = 1
-                },
-                new Question
-                {
-                    Text = "Który typ w C# jest typu referencyjnego?",
-                    Options = new[] {"int", "double", "bool", "string"},
-                    CorrectIndex = 3
-                }
-            };
-
-            _currentIndex = 0;
-            _score = 0;
-            UpdateScoreLabel();
+            StartPosition = FormStartPosition.CenterScreen;
             LoadQuestion();
         }
 
         private void LoadQuestion()
         {
-            _answered = false;
-            EnableOptions(true);
-            ClearSelection();
-            button1.Enabled = false;       // „Sprawdź” aktywne dopiero po wyborze
-            button2.Enabled = false;       // „Dalej” dopiero po sprawdzeniu
-            label3.Text = "";              // czyść feedback
+            if (currentQuestion >= questions.Count)
+            {
+                label1.Text = "Koniec quizu!";
+                label2.Text = $"Twój wynik: {score}/{questions.Count}";
+                label3.Text = "";
+                radioButton1.Visible = radioButton2.Visible = 
+                radioButton3.Visible = radioButton4.Visible = false;
+                button1.Enabled = false;
+                button2.Text = "Restart";
+                return;
+            }
 
-            var q = _quiz[_currentIndex];
-            label1.Text = $"Pytanie {(_currentIndex + 1)}/{_quiz.Count}: {q.Text}";
+            var q = questions[currentQuestion];
+            label1.Text = $"Pytanie {currentQuestion + 1}/{questions.Count}";
+            label2.Text = q.Text;
+            label3.Text = $"Wynik: {score}";
+
             radioButton1.Text = q.Options[0];
             radioButton2.Text = q.Options[1];
             radioButton3.Text = q.Options[2];
             radioButton4.Text = q.Options[3];
 
-            // Upewnij się, że nazwy RadioButtonów są widoczne (gdyby ktoś je zmienił)
-            radioButton1.Visible = radioButton2.Visible = radioButton3.Visible = radioButton4.Visible = true;
-
-            // Ustaw napis na przycisku „Dalej”/„Restart”
-            button2.Text = (_currentIndex == _quiz.Count - 1) ? "Zakończ" : "Dalej";
+            radioButton1.Checked = radioButton2.Checked = 
+            radioButton3.Checked = radioButton4.Checked = false;
         }
 
-        private void ButtonCheck_Click(object sender, EventArgs e)
+        private void button1_Click(object sender, EventArgs e)
         {
-            if (_answered) return;
+            int selected = -1;
+            if (radioButton1.Checked) selected = 0;
+            if (radioButton2.Checked) selected = 1;
+            if (radioButton3.Checked) selected = 2;
+            if (radioButton4.Checked) selected = 3;
 
-            int selected = GetSelectedIndex();
-            if (selected == -1) return;
-
-            _answered = true;
-            EnableOptions(false);      // zablokuj odpowiedzi po sprawdzeniu
-            button2.Enabled = true;    // można przejść dalej
-
-            var q = _quiz[_currentIndex];
-            if (selected == q.CorrectIndex)
+            if (selected == -1)
             {
-                _score++;
-                label3.Text = "✅ Dobrze!";
+                MessageBox.Show("Wybierz odpowiedź!", "Uwaga", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
-            else
+
+            if (selected == questions[currentQuestion].CorrectIndex)
             {
-                label3.Text = $"❌ Źle. Poprawna odpowiedź: {q.Options[q.CorrectIndex]}";
+                score++;
+                label3.Text = $"Wynik: {score}";
             }
-            UpdateScoreLabel();
+
+            currentQuestion++;
+            LoadQuestion();
         }
 
-        private void ButtonNext_Click(object sender, EventArgs e)
+        private void button2_Click(object sender, EventArgs e)
         {
-            if (!_answered) return; // najpierw sprawdź
-
-            if (_currentIndex < _quiz.Count - 1)
+            if (currentQuestion >= questions.Count)
             {
-                _currentIndex++;
+                // restart
+                currentQuestion = 0;
+                score = 0;
+                radioButton1.Visible = radioButton2.Visible = 
+                radioButton3.Visible = radioButton4.Visible = true;
+                button1.Enabled = true;
+                button2.Text = "Zakończ";
                 LoadQuestion();
             }
             else
             {
-                // Koniec quizu – pokaż podsumowanie i opcję restartu
-                MessageBox.Show($"Koniec! Twój wynik: {_score}/{_quiz.Count}", "Quiz");
-                // Restart
-                _currentIndex = 0;
-                _score = 0;
-                UpdateScoreLabel();
-                LoadQuestion();
-                label3.Text = "Nowa runda – powodzenia!";
+                Close();
             }
         }
+    }
 
-        private void AnyOption_CheckedChanged(object sender, EventArgs e)
-        {
-            if (!_answered)
-                button1.Enabled = GetSelectedIndex() != -1;
-        }
+    public class Question
+    {
+        public string Text { get; }
+        public string[] Options { get; }
+        public int CorrectIndex { get; }
 
-        private void UpdateScoreLabel()
+        public Question(string text, string[] options, int correct)
         {
-            label2.Text = $"Wynik: {_score}/{_quiz.Count}";
-        }
-
-        private void EnableOptions(bool enabled)
-        {
-            radioButton1.Enabled = enabled;
-            radioButton2.Enabled = enabled;
-            radioButton3.Enabled = enabled;
-            radioButton4.Enabled = enabled;
-        }
-
-        private void ClearSelection()
-        {
-            radioButton1.Checked = false;
-            radioButton2.Checked = false;
-            radioButton3.Checked = false;
-            radioButton4.Checked = false;
-        }
-
-        private int GetSelectedIndex()
-        {
-            if (radioButton1.Checked) return 0;
-            if (radioButton2.Checked) return 1;
-            if (radioButton3.Checked) return 2;
-            if (radioButton4.Checked) return 3;
-            return -1;
+            Text = text;
+            Options = options;
+            CorrectIndex = correct;
         }
     }
 }
