@@ -147,6 +147,9 @@ namespace SnakeSimple
         int size = 20;                          // rozmiar 1 kratki (w pikselach)
         Random r = new Random();                // generator losowych pozycji jedzenia
 
+        // ✅👉 TODO 1: Tutaj dodaj zmienną przechowującą wynik (score)
+        // (np. int score = 0;)
+
         public Form1()
         {
             InitializeComponent();
@@ -187,7 +190,12 @@ namespace SnakeSimple
 
             // jeśli zjadł jedzenie → losujemy nowe
             if (head == food)
+            {
                 food = new Point(r.Next(0, 20), r.Next(0, 20));
+
+                // ✅👉 TODO 2: Tutaj zwiększ wynik (score) o 1
+                // (np. score++;)
+            }
             else
                 snake.RemoveAt(snake.Count - 1); // jeśli nie zjadł → usuwamy ogon (wąż się nie wydłuża)
 
@@ -208,12 +216,15 @@ namespace SnakeSimple
         {
             Graphics g = e.Graphics;
 
-            // rysujemy jedzenie (czerwony kwadrat)
+            // ✅👉 TODO 4: zmień kolor jabłka (np. Brushes.Pink, Brushes.Yellow, Brushes.Purple)
             g.FillRectangle(Brushes.Red, food.X * size, food.Y * size, size, size);
 
-            // rysujemy węża (zielone kwadraty)
+            // ✅👉 TODO 5: zmień kolor węża (np. Brushes.Blue, Brushes.Black, Brushes.Orange)
             foreach (var s in snake)
                 g.FillRectangle(Brushes.Green, s.X * size, s.Y * size, size, size);
+
+            // ✅👉 TODO 3: Tutaj wyświetl wynik na ekranie
+            // (np. g.DrawString("Score: " + score, new Font("Arial", 12), Brushes.Black, 10, 10); )
         }
     }
 }
