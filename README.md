@@ -381,123 +381,89 @@ label1, label2,label3,  radioButton1, radioButton2, radioButton3, radioButton4, 
 
 ```
 using System;
-using System.Collections.Generic;
-using System.Drawing;
 using System.Windows.Forms;
 
-namespace QUIZ
+namespace QuizApp
 {
-    public partial class QuizForm : Form
+    public partial class Form1 : Form
     {
-        private int currentQuestion = 0;
-        private int score = 0;
+        int questionIndex = 0;
+        int score = 0;
 
-        // pytania
-        private readonly List<Question> questions = new List<Question>
-        {
-            new Question("Który język jest wykorzystywany w Unity?",
-                new[] { "Python", "C#", "Java", "C++" }, 1),
-            new Question("Ile bitów ma bajt?",
-                new[] { "4", "8", "16", "32" }, 1),
-            new Question("Co oznacza skrót AI?",
-                new[] { "Active Internet", "Artificial Intelligence", "Auto Integration", "Advanced Input" }, 1),
-            new Question("Kto jest twórcą Microsoft?",
-                new[] { "Steve Jobs", "Bill Gates", "Mark Zuckerberg", "Elon Musk" }, 1),
+        string[] questions = {
+            "1. Ile to 2 + 2?",
+            "2. Które zwierzę jest największe?",
+            "3. W którym roku był pierwszy lot w kosmos?"
         };
 
-        public QuizForm()
+        string[,] answers = {
+            { "3", "4", "5", "6" },
+            { "Słoń", "Rekin", "Wieloryb", "Lew" },
+            { "1957", "1961", "1969", "1975" }
+        };
+
+        int[] correctAnswers = { 1, 2, 1 }; // indeksy poprawnych odpowiedzi (0-based)
+
+        public Form1()
         {
             InitializeComponent();
-            StartPosition = FormStartPosition.CenterScreen;
             LoadQuestion();
         }
 
         private void LoadQuestion()
         {
-            if (currentQuestion >= questions.Count)
-            {
-                label1.Text = "Koniec quizu!";
-                label2.Text = $"Twój wynik: {score}/{questions.Count}";
-                label3.Text = "";
-                radioButton1.Visible = radioButton2.Visible = 
-                radioButton3.Visible = radioButton4.Visible = false;
-                button1.Enabled = false;
-                button2.Text = "Restart";
-                return;
-            }
-
-            var q = questions[currentQuestion];
-            label1.Text = $"Pytanie {currentQuestion + 1}/{questions.Count}";
-            label2.Text = q.Text;
+            // Ustaw pytanie
+            label1.Text = questions[questionIndex];
+            label2.Text = "";
             label3.Text = $"Wynik: {score}";
 
-            radioButton1.Text = q.Options[0];
-            radioButton2.Text = q.Options[1];
-            radioButton3.Text = q.Options[2];
-            radioButton4.Text = q.Options[3];
+            // Ustaw odpowiedzi
+            radioButton1.Text = answers[questionIndex, 0];
+            radioButton2.Text = answers[questionIndex, 1];
+            radioButton3.Text = answers[questionIndex, 2];
+            radioButton4.Text = answers[questionIndex, 3];
 
-            radioButton1.Checked = radioButton2.Checked = 
-            radioButton3.Checked = radioButton4.Checked = false;
+            // Odznacz radio buttony
+            radioButton1.Checked = radioButton2.Checked =
+                radioButton3.Checked = radioButton4.Checked = false;
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
             int selected = -1;
             if (radioButton1.Checked) selected = 0;
-            if (radioButton2.Checked) selected = 1;
-            if (radioButton3.Checked) selected = 2;
-            if (radioButton4.Checked) selected = 3;
+            else if (radioButton2.Checked) selected = 1;
+            else if (radioButton3.Checked) selected = 2;
+            else if (radioButton4.Checked) selected = 3;
 
             if (selected == -1)
             {
-                MessageBox.Show("Wybierz odpowiedź!", "Uwaga", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Wybierz odpowiedź!");
                 return;
             }
 
-            if (selected == questions[currentQuestion].CorrectIndex)
+            if (selected == correctAnswers[questionIndex])
             {
+                label2.Text = "✅ Poprawna odpowiedź!";
                 score++;
-                label3.Text = $"Wynik: {score}";
+            }
+            else
+            {
+                label2.Text = "❌ Zła odpowiedź!";
             }
 
-            currentQuestion++;
-            LoadQuestion();
+            label3.Text = $"Wynik: {score}";
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
-            if (currentQuestion >= questions.Count)
-            {
-                // restart
-                currentQuestion = 0;
-                score = 0;
-                radioButton1.Visible = radioButton2.Visible = 
-                radioButton3.Visible = radioButton4.Visible = true;
-                button1.Enabled = true;
-                button2.Text = "Zakończ";
+            questionIndex++;
+            if (questionIndex < questions.Length)
                 LoadQuestion();
-            }
             else
-            {
-                Close();
-            }
-        }
-    }
-
-    public class Question
-    {
-        public string Text { get; }
-        public string[] Options { get; }
-        public int CorrectIndex { get; }
-
-        public Question(string text, string[] options, int correct)
-        {
-            Text = text;
-            Options = options;
-            CorrectIndex = correct;
+                MessageBox.Show($"Koniec quizu! Twój wynik: {score}/{questions.Length}");
         }
     }
 }
-
 
 ```
