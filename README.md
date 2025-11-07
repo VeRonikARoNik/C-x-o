@@ -132,247 +132,92 @@ Snake game
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
 using System.Windows.Forms;
 
-namespace SnakeWinForms
+namespace SnakeSimple
 {
-    enum Direction { Up, Down, Left, Right }
-
-    public class SnakeForm : Form
+    public partial class Form1 : Form
     {
-        // --- Gameplay config ---
-        private int cell = 20;              // pixel size of a cell
-        private int cols = 32;              // grid columns
-        private int rows = 24;              // grid rows
-        private int baseInterval = 120;     // ms
-        private int minInterval = 55;       // ms
-        private int speedupEvery = 50;      // points
+        // --- ZMIENNE GLOBALNE GRY ---
 
-        // --- State ---
-        private readonly Timer timer = new Timer();
-        private readonly Random rng = new Random();
-        private List<Point> snake = new List<Point>();
-        private Direction dir = Direction.Right;
-        private bool grow = false;
-        private bool paused = false;
-        private bool gameOver = false;
-        private Point food;
-        private int score = 0;
+        Timer t = new Timer();                  // zegar gry, dzięki niemu gra się odświeża co X ms
+        List<Point> snake = new List<Point>();  // lista przechowująca wszystkie segmenty węża
+        Point food;                             // pozycja jedzenia (x,y)
+        int dirX = 1, dirY = 0;                 // kierunek ruchu (startowo w prawo)
+        int size = 20;                          // rozmiar 1 kratki (w pikselach)
+        Random r = new Random();                // generator losowych pozycji jedzenia
 
-        public SnakeForm()
+        public Form1()
         {
-            Text = "Snake – WinForms";
-            DoubleBuffered = true; // smooth drawing
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox = false;
-            BackColor = Color.FromArgb(24, 24, 24);
-            ForeColor = Color.White;
+            InitializeComponent();
 
-            // Compute and set client size from grid
-            ClientSize = new Size(cols * cell, rows * cell + 36); // + HUD strip
+            this.DoubleBuffered = true;  // wygładza animację (brak migania ekranu)
+            this.Width = 420;            // szerokość okna
+            this.Height = 440;           // wysokość okna
 
-            // Timer
-            timer.Interval = baseInterval;
-            timer.Tick += (s, e) => GameTick();
+            snake.Add(new Point(5, 5));  // startowa pozycja węża (jego "głowa")
 
-            KeyPreview = true; // allow form to catch arrow keys
-            KeyDown += OnKeyDown;
+            // losujemy pierwsze jedzenie
+            food = new Point(r.Next(0, 20), r.Next(0, 20));
 
-            ResetGame();
+            // konfiguracja timera (pętli gry)
+            t.Interval = 100;   // co 100ms gra wykonuje "krok"
+            t.Tick += Game;     // przypisujemy funkcję Game jako akcję timera
+            t.Start();          // startujemy grę
+
+            this.KeyDown += KeyPush;  // nasłuch klawiatury (sterowanie strzałkami)
         }
 
-        private void ResetGame()
+        // --- GŁÓWNA PĘTLA GRY ---
+        void Game(object sender, EventArgs e)
         {
-            score = 0;
-            dir = Direction.Right;
-            grow = false;
-            paused = false;
-            gameOver = false;
-            timer.Interval = baseInterval;
+            // nowa pozycja głowy = poprzednia pozycja + kierunek
+            Point head = new Point(snake[0].X + dirX, snake[0].Y + dirY);
 
-            snake = new List<Point>();
-            var start = new Point(cols / 2, rows / 2);
-            snake.Add(start);
-            snake.Add(new Point(start.X - 1, start.Y));
-            snake.Add(new Point(start.X - 2, start.Y));
-
-            SpawnFood();
-            timer.Start();
-            Invalidate();
-        }
-
-        private void SpawnFood()
-        {
-            while (true)
+            // jeśli głowa wychodzi poza planszę lub dotknie siebie → koniec gry
+            if (head.X < 0 || head.X > 19 || head.Y < 0 || head.Y > 19 || snake.Contains(head))
             {
-                var p = new Point(rng.Next(1, cols - 1), rng.Next(2, rows - 1)); // avoid HUD row
-                if (!snake.Contains(p)) { food = p; return; }
-            }
-        }
-
-        private void GameTick()
-        {
-            if (paused || gameOver) return;
-
-            var head = snake[0];
-            var next = dir switch
-            {
-                Direction.Left  => new Point(head.X - 1, head.Y),
-                Direction.Right => new Point(head.X + 1, head.Y),
-                Direction.Up    => new Point(head.X, head.Y - 1),
-                Direction.Down  => new Point(head.X, head.Y + 1),
-                _ => head
-            };
-
-            // Wall collision (keep 0..cols-1, 1..rows-1 to leave row 0 as HUD)
-            if (next.X <= 0 || next.Y <= 1 || next.X >= cols - 1 || next.Y >= rows - 1)
-            {
-                EndGame();
-                return;
+                t.Stop();
+                MessageBox.Show("Game Over");
+                Close();
             }
 
-            // Self collision (allow tail move unless growing)
-            for (int i = 0; i < snake.Count - (grow ? 0 : 1); i++)
-                if (snake[i] == next) { EndGame(); return; }
+            // dodajemy nową głowę na początek listy
+            snake.Insert(0, head);
 
-            // Move
-            snake.Insert(0, next);
-            if (next == food)
-            {
-                score += 10;
-                grow = true;
-                SpawnFood();
-                // Speed up every N points
-                if (score % speedupEvery == 0)
-                    timer.Interval = Math.Max(minInterval, timer.Interval - 5);
-            }
-
-            if (!grow)
-                snake.RemoveAt(snake.Count - 1);
+            // jeśli zjadł jedzenie → losujemy nowe
+            if (head == food)
+                food = new Point(r.Next(0, 20), r.Next(0, 20));
             else
-                grow = false;
+                snake.RemoveAt(snake.Count - 1); // jeśli nie zjadł → usuwamy ogon (wąż się nie wydłuża)
 
-            Invalidate();
+            Invalidate(); // odśwież ekran → uruchomi OnPaint
         }
 
-        private void EndGame()
+        // --- STEROWANIE STRZAŁKAMI ---
+        void KeyPush(object sender, KeyEventArgs e)
         {
-            gameOver = true;
-            timer.Stop();
-            Invalidate();
+            if (e.KeyCode == Keys.Left)  { dirX = -1; dirY = 0; }
+            if (e.KeyCode == Keys.Right) { dirX = 1;  dirY = 0; }
+            if (e.KeyCode == Keys.Up)    { dirX = 0;  dirY = -1; }
+            if (e.KeyCode == Keys.Down)  { dirX = 0;  dirY = 1; }
         }
 
-        private void OnKeyDown(object? sender, KeyEventArgs e)
-        {
-            if (gameOver)
-            {
-                if (e.KeyCode == Keys.R) ResetGame();
-                if (e.KeyCode == Keys.Escape) Close();
-                return;
-            }
-
-            switch (e.KeyCode)
-            {
-                case Keys.Up:    if (dir != Direction.Down) dir = Direction.Up; break;
-                case Keys.Down:  if (dir != Direction.Up) dir = Direction.Down; break;
-                case Keys.Left:  if (dir != Direction.Right) dir = Direction.Left; break;
-                case Keys.Right: if (dir != Direction.Left) dir = Direction.Right; break;
-                case Keys.Space:
-                case Keys.P:
-                    paused = !paused; if (!paused) Focus(); break;
-                case Keys.R:
-                    ResetGame(); break;
-                case Keys.Escape:
-                    Close(); break;
-            }
-        }
-
+        // --- RYSOWANIE NA EKRANIE ---
         protected override void OnPaint(PaintEventArgs e)
         {
-            base.OnPaint(e);
-            var g = e.Graphics;
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
+            Graphics g = e.Graphics;
 
-            // HUD (top strip at grid row 0)
-            var hudRect = new Rectangle(0, 0, ClientSize.Width, cell + 4);
-            using (var hudBg = new SolidBrush(Color.FromArgb(32, 32, 32))) g.FillRectangle(hudBg, hudRect);
-            using (var pen = new Pen(Color.FromArgb(64, 64, 64))) g.DrawLine(pen, 0, cell + 4, ClientSize.Width, cell + 4);
-            using (var f = new Font("Segoe UI", 10, FontStyle.Bold))
-            using (var hudBrush = new SolidBrush(Color.White))
-            {
-                g.DrawString($"Score: {score}   Speed: {1000 / timer.Interval:0} cells/s   [Arrows] Move  [Space/P] Pause  [R] Restart  [Esc] Quit", f, hudBrush, 8, 6);
-            }
+            // rysujemy jedzenie (czerwony kwadrat)
+            g.FillRectangle(Brushes.Red, food.X * size, food.Y * size, size, size);
 
-            // Playfield background
-            var fieldRect = new Rectangle(0, cell + 5, cols * cell, (rows - 1) * cell);
-            using (var bg = new SolidBrush(Color.FromArgb(18, 18, 18))) g.FillRectangle(bg, fieldRect);
-
-            // Walls
-            using (var wall = new SolidBrush(Color.FromArgb(60, 60, 60)))
-            {
-                // top and bottom
-                g.FillRectangle(wall, 0, cell + 5, cols * cell, cell); // top wall line
-                g.FillRectangle(wall, 0, (rows - 1) * cell + 5, cols * cell, cell); // bottom wall line
-                // left and right
-                g.FillRectangle(wall, 0, cell + 5, cell, (rows - 1) * cell);
-                g.FillRectangle(wall, (cols - 1) * cell, cell + 5, cell, (rows - 1) * cell);
-            }
-
-            // Food
-            DrawCell(g, food, Color.Gold);
-
-            // Snake
-            for (int i = 0; i < snake.Count; i++)
-            {
-                var color = (i == 0) ? Color.Lime : Color.FromArgb(200, 230, 230, 230);
-                DrawCell(g, snake[i], color);
-            }
-
-            if (paused)
-                DrawCenterBanner(g, "PAUSED\nPress Space to resume");
-
-            if (gameOver)
-                DrawCenterBanner(g, $"GAME OVER\nScore: {score}\nPress R to restart");
-        }
-
-        private void DrawCell(Graphics g, Point p, Color color)
-        {
-            int x = p.X * cell;
-            int y = p.Y * cell + 5; // + HUD offset
-            var rect = new Rectangle(x + 1, y + 1, cell - 2, cell - 2);
-            using (var b = new SolidBrush(color)) g.FillRectangle(b, rect);
-        }
-
-        private void DrawCenterBanner(Graphics g, string text)
-        {
-            using var fmt = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-            using var font = new Font("Segoe UI", 20, FontStyle.Bold);
-            using var small = new Font("Segoe UI", 10, FontStyle.Regular);
-            var lines = text.Split('\n');
-            var center = new Rectangle(0, cell + 5, cols * cell, (rows - 1) * cell);
-
-            // Semi-transparent overlay
-            using (var overlay = new SolidBrush(Color.FromArgb(120, 0, 0, 0))) g.FillRectangle(overlay, center);
-
-            // Draw lines stacked
-            float y = center.Top + center.Height / 2f - (lines.Length - 1) * 18;
-            for (int i = 0; i < lines.Length; i++)
-            {
-                using var brush = new SolidBrush(Color.White);
-                g.DrawString(lines[i], i == 0 ? font : small, brush, new RectangleF(center.Left, y, center.Width, 40), fmt);
-                y += (i == 0 ? 44 : 22);
-            }
-        }
-
-        [STAThread]
-        public static void Main()
-        {
-            ApplicationConfiguration.Initialize();
-            Application.Run(new SnakeForm());
+            // rysujemy węża (zielone kwadraty)
+            foreach (var s in snake)
+                g.FillRectangle(Brushes.Green, s.X * size, s.Y * size, size, size);
         }
     }
 }
+
 
 ```
 Quiz game
