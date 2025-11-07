@@ -323,3 +323,7 @@ namespace QuizApp
 }
 
 ```
+
+⭐ zmienić teksty na własne
+⭐ dodać więcej niż 1 pytanie
+⭐ zmienić temat quizu (np. Minecraft, sport, psy itd.)
