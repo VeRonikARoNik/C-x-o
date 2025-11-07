@@ -138,97 +138,112 @@ namespace SnakeSimple
 {
     public partial class Form1 : Form
     {
-        // --- ZMIENNE GLOBALNE GRY ---
+        Timer t = new Timer();
+        List<Point> snake = new List<Point>();
+        Point food;
+        int dirX = 1, dirY = 0;
+        int size = 20;
+        Random r = new Random();
 
-        Timer t = new Timer();                  // zegar gry, dzięki niemu gra się odświeża co X ms
-        List<Point> snake = new List<Point>();  // lista przechowująca wszystkie segmenty węża
-        Point food;                             // pozycja jedzenia (x,y)
-        int dirX = 1, dirY = 0;                 // kierunek ruchu (startowo w prawo)
-        int size = 20;                          // rozmiar 1 kratki (w pikselach)
-        Random r = new Random();                // generator losowych pozycji jedzenia
-
-        // ✅👉 TODO 1: Tutaj dodaj zmienną przechowującą wynik (score)
-        // (np. int score = 0;)
+        // ✅ TODO 1: Dodaj tutaj zmienną przechowującą wynik (score)
+        // ODPOWIEDŹ:
+        // int score = 0;
 
         public Form1()
         {
             InitializeComponent();
 
-            this.DoubleBuffered = true;  // wygładza animację (brak migania ekranu)
-            this.Width = 420;            // szerokość okna
-            this.Height = 440;           // wysokość okna
+            this.DoubleBuffered = true;
+            this.ClientSize = new Size(20 * size, 20 * size);
 
-            snake.Add(new Point(5, 5));  // startowa pozycja węża (jego "głowa")
+            snake.Add(new Point(5, 5));
+            food = NewFoodPosition();
 
-            // losujemy pierwsze jedzenie
-            food = new Point(r.Next(0, 20), r.Next(0, 20));
+            t.Interval = 100;
+            t.Tick += Game;
+            t.Start();
 
-            // konfiguracja timera (pętli gry)
-            t.Interval = 100;   // co 100ms gra wykonuje "krok"
-            t.Tick += Game;     // przypisujemy funkcję Game jako akcję timera
-            t.Start();          // startujemy grę
-
-            this.KeyDown += KeyPush;  // nasłuch klawiatury (sterowanie strzałkami)
+            this.KeyDown += KeyPush;
         }
 
-        // --- GŁÓWNA PĘTLA GRY ---
+        Point NewFoodPosition()
+        {
+            Point p;
+            do
+            {
+                p = new Point(r.Next(0, 20), r.Next(0, 20));
+            } while (snake.Contains(p));
+            return p;
+        }
+
         void Game(object sender, EventArgs e)
         {
-            // nowa pozycja głowy = poprzednia pozycja + kierunek
             Point head = new Point(snake[0].X + dirX, snake[0].Y + dirY);
 
-            // jeśli głowa wychodzi poza planszę lub dotknie siebie → koniec gry
             if (head.X < 0 || head.X > 19 || head.Y < 0 || head.Y > 19 || snake.Contains(head))
             {
                 t.Stop();
+
+                // ✅ TODO 2: W MessageBox wypisz wynik gracza
+                // ODPOWIEDŹ:
+                // MessageBox.Show("Game Over\nScore: " + score);
+
                 MessageBox.Show("Game Over");
+
                 Close();
+                return;
             }
 
-            // dodajemy nową głowę na początek listy
             snake.Insert(0, head);
 
-            // jeśli zjadł jedzenie → losujemy nowe
             if (head == food)
             {
-                food = new Point(r.Next(0, 20), r.Next(0, 20));
+                // ✅ TODO 3: Zwiększ wynik o 1
+                // ODPOWIEDŹ:
+                // score++;
 
-                // ✅👉 TODO 2: Tutaj zwiększ wynik (score) o 1
-                // (np. score++;)
+                food = NewFoodPosition();
             }
             else
-                snake.RemoveAt(snake.Count - 1); // jeśli nie zjadł → usuwamy ogon (wąż się nie wydłuża)
+            {
+                snake.RemoveAt(snake.Count - 1);
+            }
 
-            Invalidate(); // odśwież ekran → uruchomi OnPaint
+            Invalidate();
         }
 
-        // --- STEROWANIE STRZAŁKAMI ---
         void KeyPush(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Left)  { dirX = -1; dirY = 0; }
-            if (e.KeyCode == Keys.Right) { dirX = 1;  dirY = 0; }
-            if (e.KeyCode == Keys.Up)    { dirX = 0;  dirY = -1; }
-            if (e.KeyCode == Keys.Down)  { dirX = 0;  dirY = 1; }
+            if (e.KeyCode == Keys.Left && dirX != 1) { dirX = -1; dirY = 0; }
+            if (e.KeyCode == Keys.Right && dirX != -1) { dirX = 1; dirY = 0; }
+            if (e.KeyCode == Keys.Up && dirY != 1) { dirX = 0; dirY = -1; }
+            if (e.KeyCode == Keys.Down && dirY != -1) { dirX = 0; dirY = 1; }
         }
 
-        // --- RYSOWANIE NA EKRANIE ---
         protected override void OnPaint(PaintEventArgs e)
         {
+            base.OnPaint(e);
             Graphics g = e.Graphics;
 
-            // ✅👉 TODO 4: zmień kolor jabłka (np. Brushes.Pink, Brushes.Yellow, Brushes.Purple)
+            // ✅ TODO 4: Zmień kolor jabłka
+            // ODPOWIEDŹ:
+            // g.FillRectangle(Brushes.Yellow, food.X * size, food.Y * size, size, size);
+
             g.FillRectangle(Brushes.Red, food.X * size, food.Y * size, size, size);
 
-            // ✅👉 TODO 5: zmień kolor węża (np. Brushes.Blue, Brushes.Black, Brushes.Orange)
+            // ✅ TODO 5: Zmień kolor węża
+            // ODPOWIEDŹ:
+            // g.FillRectangle(Brushes.Black, s.X * size, s.Y * size, size, size);
+
             foreach (var s in snake)
                 g.FillRectangle(Brushes.Green, s.X * size, s.Y * size, size, size);
 
-            // ✅👉 TODO 3: Tutaj wyświetl wynik na ekranie
-            // (np. g.DrawString("Score: " + score, new Font("Arial", 12), Brushes.Black, 10, 10); )
+            // ✅ TODO 6: Wyświetl wynik na ekranie
+            // ODPOWIEDŹ:
+            // g.DrawString("Score: " + score, new Font("Arial", 12, FontStyle.Bold), Brushes.Black, 5, 5);
         }
     }
 }
-
 
 ```
 Quiz game
