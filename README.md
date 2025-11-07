@@ -145,9 +145,8 @@ namespace SnakeSimple
         int size = 20;
         Random r = new Random();
 
-        // ✅ TODO 1: Dodaj tutaj zmienną przechowującą wynik (score)
-        // ODPOWIEDŹ:
-        // int score = 0;
+        // score — przechowuje wynik gracza
+        int score = 0;
 
         public Form1()
         {
@@ -183,13 +182,7 @@ namespace SnakeSimple
             if (head.X < 0 || head.X > 19 || head.Y < 0 || head.Y > 19 || snake.Contains(head))
             {
                 t.Stop();
-
-                // ✅ TODO 2: W MessageBox wypisz wynik gracza
-                // ODPOWIEDŹ:
-                // MessageBox.Show("Game Over\nScore: " + score);
-
-                MessageBox.Show("Game Over");
-
+                MessageBox.Show("Game Over\nScore: " + score, "Snake");
                 Close();
                 return;
             }
@@ -198,10 +191,8 @@ namespace SnakeSimple
 
             if (head == food)
             {
-                // ✅ TODO 3: Zwiększ wynik o 1
-                // ODPOWIEDŹ:
-                // score++;
-
+                // zjedzenie jedzenia -> +1 punkt i nowe jedzenie
+                score++;
                 food = NewFoodPosition();
             }
             else
@@ -225,25 +216,22 @@ namespace SnakeSimple
             base.OnPaint(e);
             Graphics g = e.Graphics;
 
-            // ✅ TODO 4: Zmień kolor jabłka
-            // ODPOWIEDŹ:
-            // g.FillRectangle(Brushes.Yellow, food.X * size, food.Y * size, size, size);
-
+            // rysujemy jedzenie (jabłko)
             g.FillRectangle(Brushes.Red, food.X * size, food.Y * size, size, size);
 
-            // ✅ TODO 5: Zmień kolor węża
-            // ODPOWIEDŹ:
-            // g.FillRectangle(Brushes.Black, s.X * size, s.Y * size, size, size);
-
+            // rysujemy węża
             foreach (var s in snake)
                 g.FillRectangle(Brushes.Green, s.X * size, s.Y * size, size, size);
 
-            // ✅ TODO 6: Wyświetl wynik na ekranie
-            // ODPOWIEDŹ:
-            // g.DrawString("Score: " + score, new Font("Arial", 12, FontStyle.Bold), Brushes.Black, 5, 5);
+            // wyświetlamy wynik w lewym górnym rogu
+            using (Font f = new Font("Arial", 12, FontStyle.Bold))
+            {
+                g.DrawString("Score: " + score, f, Brushes.Black, 5, 5);
+            }
         }
     }
 }
+
 
 ```
 Quiz game
